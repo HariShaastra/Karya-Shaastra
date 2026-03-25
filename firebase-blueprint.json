@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
+      },
+      "required": ["uid", "email"]
+    },
+    "Initiative": {
+      "title": "Initiative",
+      "description": "A project or initiative started by a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["profit", "non-profit", "community"] },
+        "problemStatement": { "type": "string" },
+        "targetGroup": { "type": "string" },
+        "proposedSolution": { "type": "string" },
+        "why": { "type": "string" },
+        "expectedOutcome": { "type": "string" },
+        "stage": { "type": "string", "enum": ["idea", "pilot", "active", "growing"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "ownerId", "name", "type"]
+    },
+    "Action": {
+      "title": "Action",
+      "description": "A real work action logged for an initiative",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "initiativeId": { "type": "string" },
+        "userId": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string", "enum": ["outreach", "operations", "finance", "content", "other"] },
+        "timeSpent": { "type": "integer" },
+        "notes": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "proofUrl": { "type": "string" },
+        "proofType": { "type": "string" }
+      },
+      "required": ["id", "initiativeId", "userId", "description", "category", "timestamp"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "A member of an initiative team",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "initiativeId": { "type": "string" },
+        "userId": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["founder", "volunteer", "partner"] },
+        "invitedAt": { "type": "string", "format": "date-time" },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "initiativeId", "email", "role"]
+    },
+    "Resource": {
+      "title": "Resource",
+      "description": "Financial tracking for an initiative",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "initiativeId": { "type": "string" },
+        "type": { "type": "string", "enum": ["in", "out"] },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "initiativeId", "type", "amount", "timestamp"]
+    },
+    "Milestone": {
+      "title": "Milestone",
+      "description": "A milestone for an initiative",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "initiativeId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "initiativeId", "title"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/initiatives/{initiativeId}": {
+      "schema": "Initiative",
+      "description": "Initiatives"
+    },
+    "/initiatives/{initiativeId}/actions/{actionId}": {
+      "schema": "Action",
+      "description": "Actions logged for an initiative"
+    },
+    "/initiatives/{initiativeId}/team/{memberId}": {
+      "schema": "TeamMember",
+      "description": "Team members of an initiative"
+    },
+    "/initiatives/{initiativeId}/resources/{resourceId}": {
+      "schema": "Resource",
+      "description": "Financial records"
+    },
+    "/initiatives/{initiativeId}/milestones/{milestoneId}": {
+      "schema": "Milestone",
+      "description": "Milestones"
+    }
+  }
+}
