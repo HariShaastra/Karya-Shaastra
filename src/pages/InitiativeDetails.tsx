@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { doc, onSnapshot, collection, query, orderBy, addDoc, serverTimestamp, updateDoc, deleteDoc, where } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { useAuth } from '../App';
-import { Initiative, Action, TeamMember, Resource, Milestone, InitiativeStage, ActionCategory } from '../types';
+import { Initiative, Action, TeamMember, Resource, Milestone, InitiativeStage, ActionCategory, EditLog, TeamRole } from '../types';
 import { 
   LayoutDashboard, 
   Rocket, 
@@ -25,16 +25,19 @@ import {
   Trash2,
   ExternalLink,
   Edit2,
-  X
+  X,
+  History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
+import { cn } from '../lib/utils';
+import Saathi from '../components/Saathi';
 
-type Tab = 'overview' | 'pathways' | 'actions' | 'team' | 'resources' | 'milestones' | 'proof';
+type Tab = 'overview' | 'pathways' | 'actions' | 'team' | 'resources' | 'milestones' | 'logs' | 'proof';
 
 export default function InitiativeDetails() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [initiative, setInitiative] = useState<Initiative | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -45,7 +48,12 @@ export default function InitiativeDetails() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [editLogs, setEditLogs] = useState<EditLog[]>([]);
   const [isEditingInitiative, setIsEditingInitiative] = useState(false);
+
+  const isOwner = initiative?.ownerId === user?.uid;
+  const isTeamMember = team.some(m => m.userId === user?.uid) || isOwner;
+  const canEdit = isTeamMember;
 
   useEffect(() => {
     if (!id) return;
@@ -75,14 +83,34 @@ export default function InitiativeDetails() {
       setMilestones(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Milestone)));
     });
 
+    const unsubLogs = onSnapshot(query(collection(db, 'initiatives', id, 'editLogs'), orderBy('timestamp', 'desc')), (snapshot) => {
+      setEditLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EditLog)));
+    });
+
     return () => {
       unsubInitiative();
       unsubActions();
       unsubTeam();
       unsubResources();
       unsubMilestones();
+      unsubLogs();
     };
   }, [id, navigate]);
+
+  const logEdit = async (action: string) => {
+    if (!id || !user || !profile) return;
+    try {
+      await addDoc(collection(db, 'initiatives', id, 'editLogs'), {
+        initiativeId: id,
+        userId: user.uid,
+        userName: profile.displayName,
+        action,
+        timestamp: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error('Failed to log edit:', err);
+    }
+  };
 
   if (loading || !initiative) return <div className="flex items-center justify-center h-64">Loading...</div>;
 
@@ -94,43 +122,74 @@ export default function InitiativeDetails() {
     { id: 'resources', label: 'Finance', icon: DollarSign },
     { id: 'milestones', label: 'Milestones', icon: Trophy },
     { id: 'proof', label: 'Proof', icon: FileText },
+    { id: 'logs', label: 'Edit Logs', icon: History },
   ];
 
   return (
     <div className="space-y-8">
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <span className={cn(
-              "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-              initiative.type === 'profit' ? "bg-[#E0F2FE] text-[#0369A1]" :
-              initiative.type === 'non-profit' ? "bg-[#F0FDF4] text-[#15803D]" :
-              "bg-[#FEF2F2] text-[#B91C1C]"
-            )}>
-              {initiative.type}
-            </span>
-            <span className="text-[10px] font-black text-[#999990] uppercase tracking-widest">
-              Stage: {initiative.stage}
-            </span>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 bg-white border border-brand-line/10 rounded-[2.5rem] p-8 shadow-2xl shadow-brand-primary/5">
+        <div className="flex flex-col md:flex-row gap-8 items-center flex-1">
+          <div className="flex-shrink-0">
+            <Saathi 
+              emotion={initiative.stage === 'growing' ? 'excited' : 'happy'} 
+              message={initiative.stage === 'idea' ? "Let's turn this idea into reality!" : "Great progress! Keep going!"} 
+            />
           </div>
-          <h1 className="text-4xl font-black tracking-tight">{initiative.name}</h1>
+          <div>
+            <div className="flex flex-wrap items-center gap-3 mb-2">
+              <span className={cn(
+                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                initiative.type === 'profit' ? "bg-blue-50 text-blue-600" :
+                initiative.type === 'non-profit' ? "bg-green-50 text-green-600" :
+                "bg-red-50 text-red-600"
+              )}>
+                {initiative.type}
+              </span>
+              <span className="text-[10px] font-black text-brand-ink/40 uppercase tracking-widest">
+                Stage: {initiative.stage}
+              </span>
+            </div>
+            <h1 className="text-4xl font-black tracking-tight serif text-brand-ink mb-2">{initiative.name}</h1>
+            <p className="text-brand-ink/60 font-medium italic serif line-clamp-1">{initiative.problemStatement}</p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {canEdit && (
+            <button
+              onClick={() => setIsEditingInitiative(true)}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white border border-brand-line/10 rounded-2xl font-bold hover:border-brand-primary transition-all text-brand-ink active:scale-95"
+            >
+              <Edit2 size={18} />
+              Edit
+            </button>
+          )}
           <button
-            onClick={() => setIsEditingInitiative(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-white border border-brand-line/10 rounded-xl font-bold hover:border-brand-primary transition-all text-brand-ink"
-          >
-            <Edit2 size={18} />
-            Edit Initiative
-          </button>
-          <Link
-            to={`/p/${initiative.id}`}
-            className="flex items-center gap-2 px-6 py-3 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
+            onClick={() => {
+              const url = window.location.href;
+              navigator.clipboard.writeText(url);
+              alert('Collaboration link copied!');
+            }}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white border border-brand-line/10 text-brand-ink rounded-2xl font-bold hover:border-brand-primary transition-all active:scale-95"
           >
             <Share2 size={18} />
-            Public Profile
-          </Link>
+            Copy Link
+          </button>
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(
+              `*KARYA SHAASTRA: Blueprint for Impact*\n\n` +
+              `*Initiative:* ${initiative.name}\n` +
+              `*Focus:* ${initiative.problemStatement}\n` +
+              `*Current Stage:* ${initiative.stage.toUpperCase()}\n\n` +
+              `View the full framework and collaborate here: ${window.location.href}`
+            )}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-green-500 text-white rounded-2xl font-bold hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 active:scale-95"
+          >
+            <Zap size={18} />
+            Share WhatsApp
+          </a>
         </div>
       </header>
 
@@ -165,6 +224,7 @@ export default function InitiativeDetails() {
                 };
                 try {
                   await updateDoc(doc(db, 'initiatives', initiative.id), updates);
+                  await logEdit('Updated Initiative Details');
                   setIsEditingInitiative(false);
                 } catch (err) {
                   console.error('Failed to update initiative:', err);
@@ -229,20 +289,20 @@ export default function InitiativeDetails() {
       </AnimatePresence>
 
       {/* Tabs Navigation */}
-      <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar">
+      <div className="flex flex-wrap items-center gap-2 pb-6 border-b border-brand-line/5">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-2 px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all",
+              "flex items-center gap-2 px-6 py-4 rounded-2xl font-bold transition-all flex-grow md:flex-grow-0",
               activeTab === tab.id
-                ? "bg-brand-primary text-white shadow-lg shadow-brand-primary/20"
-                : "bg-white border border-brand-line/10 text-brand-ink/60 hover:border-brand-primary hover:text-brand-primary"
+                ? "bg-brand-primary text-white shadow-xl shadow-brand-primary/20 scale-105 z-10"
+                : "bg-white border border-brand-line/10 text-brand-ink/60 hover:border-brand-primary/40 hover:text-brand-ink"
             )}
           >
             <tab.icon size={18} />
-            {tab.label}
+            <span className="whitespace-nowrap">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -259,10 +319,11 @@ export default function InitiativeDetails() {
           >
             {activeTab === 'overview' && <OverviewTab initiative={initiative} />}
             {activeTab === 'pathways' && <PathwaysTab initiative={initiative} milestones={milestones} />}
-            {activeTab === 'actions' && <ActionsTab initiative={initiative} actions={actions} />}
-            {activeTab === 'team' && <TeamTab initiative={initiative} team={team} />}
-            {activeTab === 'resources' && <ResourcesTab initiative={initiative} resources={resources} />}
-            {activeTab === 'milestones' && <MilestonesTab initiative={initiative} milestones={milestones} />}
+            {activeTab === 'actions' && <ActionsTab initiative={initiative} actions={actions} canEdit={canEdit} />}
+            {activeTab === 'team' && <TeamTab initiative={initiative} team={team} isOwner={isOwner} />}
+            {activeTab === 'resources' && <ResourcesTab initiative={initiative} resources={resources} canEdit={canEdit} />}
+            {activeTab === 'milestones' && <MilestonesTab initiative={initiative} milestones={milestones} canEdit={canEdit} />}
+            {activeTab === 'logs' && <LogsTab logs={editLogs} />}
             {activeTab === 'proof' && <ProofTab initiative={initiative} actions={actions} />}
           </motion.div>
         </AnimatePresence>
@@ -283,12 +344,21 @@ function OverviewTab({ initiative }: { initiative: Initiative }) {
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-6">
-      {fields.map((field) => (
-        <div key={field.label} className="bg-white border border-brand-line/10 rounded-3xl p-8">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-4">{field.label}</h3>
-          <p className="text-lg font-medium text-brand-ink leading-relaxed whitespace-pre-wrap">{field.value}</p>
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {fields.map((field, idx) => (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: idx * 0.05 }}
+          key={field.label} 
+          className={cn(
+            "bg-white border border-brand-line/10 rounded-[2.5rem] p-8 shadow-sm hover:border-brand-primary/20 transition-all",
+            idx === 0 && "md:col-span-2"
+          )}
+        >
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-brand-ink/30 mb-4 font-serif">{field.label}</h3>
+          <p className="text-xl font-medium text-brand-ink leading-[1.6] whitespace-pre-wrap serif">{field.value || 'Not specified yet.'}</p>
+        </motion.div>
       ))}
     </div>
   );
@@ -342,34 +412,39 @@ function PathwaysTab({ initiative, milestones }: { initiative: Initiative; miles
   );
 }
 
-function ActionsTab({ initiative, actions }: { initiative: Initiative; actions: Action[] }) {
+function ActionsTab({ initiative, actions, canEdit }: { initiative: Initiative; actions: Action[]; canEdit: boolean }) {
   const [isAdding, setIsAdding] = useState(false);
+  const { profile } = useAuth();
   const [editingAction, setEditingAction] = useState<Action | null>(null);
   const [newAction, setNewAction] = useState({
     description: '',
     category: 'operations' as ActionCategory,
     timeSpent: 30,
     notes: '',
+    proofText: '',
+    proofUrl: '',
   });
 
   const handleSaveAction = async () => {
-    if (!newAction.description) return;
+    if (!newAction.description || !profile) return;
     try {
       if (editingAction) {
         await updateDoc(doc(db, 'initiatives', initiative.id, 'actions', editingAction.id), {
           ...newAction,
+          timestamp: serverTimestamp(),
         });
       } else {
         await addDoc(collection(db, 'initiatives', initiative.id, 'actions'), {
           ...newAction,
           initiativeId: initiative.id,
           userId: auth.currentUser?.uid,
+          userName: profile.displayName || profile.email,
           timestamp: serverTimestamp(),
         });
       }
       setIsAdding(false);
       setEditingAction(null);
-      setNewAction({ description: '', category: 'operations', timeSpent: 30, notes: '' });
+      setNewAction({ description: '', category: 'operations', timeSpent: 30, notes: '', proofText: '', proofUrl: '' });
     } catch (error) {
       console.error('Failed to save action:', error);
     }
@@ -386,26 +461,28 @@ function ActionsTab({ initiative, actions }: { initiative: Initiative; actions: 
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-black font-serif text-brand-ink">Daily Log</h3>
-        <button
-          onClick={() => {
-            setEditingAction(null);
-            setNewAction({ description: '', category: 'operations', timeSpent: 30, notes: '' });
-            setIsAdding(true);
-          }}
-          className="flex items-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
-        >
-          <Plus size={18} />
-          Log Work
-        </button>
-      </div>
+      {canEdit && (
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h3 className="text-2xl font-black font-serif text-brand-ink">Daily Log</h3>
+          <button
+            onClick={() => {
+              setEditingAction(null);
+              setNewAction({ description: '', category: 'operations', timeSpent: 30, notes: '', proofText: '', proofUrl: '' });
+              setIsAdding(true);
+            }}
+            className="flex items-center gap-2 bg-brand-primary text-white px-6 py-4 rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 active:scale-95"
+          >
+            <Plus size={18} />
+            Log Work
+          </button>
+        </div>
+      )}
 
       {(isAdding || editingAction) && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white border-2 border-brand-primary rounded-3xl p-8 space-y-6 shadow-xl shadow-brand-primary/5"
+          className="bg-white border-2 border-brand-primary rounded-3xl p-6 md:p-8 space-y-6 shadow-xl shadow-brand-primary/5"
         >
           <h4 className="text-xl font-black text-brand-ink">{editingAction ? 'Edit Action' : 'Log New Action'}</h4>
           <div>
@@ -443,62 +520,118 @@ function ActionsTab({ initiative, actions }: { initiative: Initiative; actions: 
               />
             </div>
           </div>
+          <div className="grid grid-cols-1 gap-6">
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Proof of Work (Text Evidence)</label>
+              <textarea
+                value={newAction.proofText}
+                onChange={(e) => setNewAction({ ...newAction, proofText: e.target.value })}
+                placeholder="Mention key outcomes or data points..."
+                rows={2}
+                className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-medium text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Proof Link (URL)</label>
+              <input
+                type="url"
+                value={newAction.proofUrl}
+                onChange={(e) => setNewAction({ ...newAction, proofUrl: e.target.value })}
+                placeholder="https://..."
+                className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-medium text-sm"
+              />
+            </div>
+          </div>
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Notes (Optional)</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Private Notes (Optional)</label>
             <textarea
               value={newAction.notes}
               onChange={(e) => setNewAction({ ...newAction, notes: e.target.value })}
-              rows={3}
-              className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-medium"
+              rows={2}
+              className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-medium text-sm italic"
             />
           </div>
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <button onClick={() => { setIsAdding(false); setEditingAction(null); }} className="px-6 py-3 font-bold text-brand-ink/60 hover:bg-brand-line/5 rounded-xl transition-all">Cancel</button>
-            <button onClick={handleSaveAction} className="px-8 py-3 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4">
+            <button onClick={() => { setIsAdding(false); setEditingAction(null); }} className="px-6 py-4 font-bold text-brand-ink/60 hover:bg-brand-line/5 rounded-xl transition-all">Cancel</button>
+            <button onClick={handleSaveAction} className="px-8 py-4 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20">
               {editingAction ? 'Update Action' : 'Save Action'}
             </button>
           </div>
         </motion.div>
       )}
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4">
         {actions.map((action) => (
-          <div key={action.id} className="bg-white border border-brand-line/10 rounded-2xl p-6 flex items-start gap-6 group hover:border-brand-primary transition-all">
-            <div className="w-12 h-12 rounded-xl bg-brand-bg flex items-center justify-center text-brand-primary flex-shrink-0">
+          <div key={action.id} className="bg-white border border-brand-line/10 rounded-3xl p-6 flex flex-col sm:flex-row items-start gap-6 group hover:border-brand-primary transition-all overflow-hidden">
+            <div className="w-12 h-12 rounded-2xl bg-brand-bg flex items-center justify-center text-brand-primary flex-shrink-0">
               <Zap size={24} />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <h4 className="font-bold text-lg truncate text-brand-ink">{action.description}</h4>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingAction(action);
-                      setNewAction({
-                        description: action.description,
-                        category: action.category,
-                        timeSpent: action.timeSpent,
-                        notes: action.notes || '',
-                      });
-                    }}
-                    className="p-2 text-brand-ink/40 hover:text-brand-primary transition-colors"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteAction(action.id)}
-                    className="p-2 text-brand-ink/40 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                  <span className="text-[10px] font-black text-brand-ink/40 uppercase tracking-widest ml-2">
-                    {action.timestamp?.toDate ? format(action.timestamp.toDate(), 'MMM d, h:mm a') : 'Just now'}
-                  </span>
+            <div className="flex-1 min-w-0 w-full">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-3">
+                <div className="min-w-0">
+                  <h4 className="font-bold text-lg truncate text-brand-ink">{action.description}</h4>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-brand-ink/40 mt-1">
+                    <span className="flex items-center gap-1 font-bold"><Clock size={12} /> {action.timeSpent}m</span>
+                    <span className="px-2 py-0.5 bg-brand-bg rounded-[4px] font-black uppercase tracking-[0.1em] text-[8px]">{action.category}</span>
+                    <span className="flex items-center gap-1 font-bold italic"><Users size={12} /> {action.userName || 'Member'}</span>
+                  </div>
                 </div>
+                {canEdit && (action.userId === auth.currentUser?.uid) && (
+                  <div className="flex items-center gap-2 self-end sm:self-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setEditingAction(action);
+                        setNewAction({
+                          description: action.description,
+                          category: action.category,
+                          timeSpent: action.timeSpent,
+                          notes: action.notes || '',
+                          proofText: action.proofText || '',
+                          proofUrl: action.proofUrl || '',
+                        });
+                        setIsAdding(false);
+                      }}
+                      className="p-2.5 bg-brand-bg text-brand-ink/40 hover:text-brand-primary hover:bg-white border border-transparent hover:border-brand-primary/20 rounded-xl transition-all"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteAction(action.id)}
+                      className="p-2.5 bg-brand-bg text-brand-ink/40 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-xl transition-all"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-4 text-sm text-brand-ink/60">
-                <span className="flex items-center gap-1"><Clock size={14} /> {action.timeSpent}m</span>
-                <span className="px-2 py-0.5 bg-brand-bg rounded text-[10px] font-black uppercase tracking-widest">{action.category}</span>
+              
+              {action.proofText && (
+                <div className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4 mb-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-brand-primary mb-1">Evidence Summary</p>
+                  <p className="text-sm font-medium text-brand-ink/70 italic serif leading-relaxed">"{action.proofText}"</p>
+                </div>
+              )}
+
+              {action.proofUrl && (
+                <a 
+                  href={action.proofUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-bold text-brand-primary hover:underline mb-3"
+                >
+                  <ExternalLink size={14} />
+                  View Uploaded Proof
+                </a>
+              )}
+
+              {action.notes && (
+                <p className="text-xs text-brand-ink/40 font-medium italic border-l-2 border-brand-line/10 pl-3 py-1">
+                  {action.notes}
+                </p>
+              )}
+              
+              <div className="mt-4 pt-4 border-t border-brand-line/5 text-[9px] font-black text-brand-ink/20 uppercase tracking-widest">
+                {action.timestamp?.toDate ? format(action.timestamp.toDate(), 'MMMM d, h:mm a') : 'Recent'}
               </div>
             </div>
           </div>
@@ -508,79 +641,100 @@ function ActionsTab({ initiative, actions }: { initiative: Initiative; actions: 
   );
 }
 
-function TeamTab({ initiative, team }: { initiative: Initiative; team: TeamMember[] }) {
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<any>('volunteer');
+function TeamTab({ initiative, team, isOwner }: { initiative: Initiative; team: TeamMember[]; isOwner: boolean }) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [newMember, setNewMember] = useState({ email: '', role: 'volunteer' as TeamRole, displayName: '' });
 
-  const handleInvite = async () => {
-    if (!email) return;
+  const handleAddMember = async () => {
+    if (!newMember.email) return;
     try {
       await addDoc(collection(db, 'initiatives', initiative.id, 'team'), {
+        ...newMember,
         initiativeId: initiative.id,
-        email,
-        role,
         invitedAt: serverTimestamp(),
-        userId: '', // Will be filled when they join
       });
-      setEmail('');
+      setIsAdding(false);
+      setNewMember({ email: '', role: 'volunteer', displayName: '' });
     } catch (error) {
-      console.error('Failed to invite:', error);
+      console.error('Failed to add team member:', error);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!confirm('Remove this collaborator?')) return;
+    try {
+      await deleteDoc(doc(db, 'initiatives', initiative.id, 'team', memberId));
+    } catch (error) {
+      console.error('Failed to remove member:', error);
     }
   };
 
   return (
     <div className="space-y-8">
-      <div className="bg-white border border-[#E5E5E0] rounded-3xl p-8">
-        <h3 className="text-xl font-black mb-6">Invite Collaborator</h3>
-        <div className="flex flex-col md:flex-row gap-4">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email address"
-            className="flex-1 p-4 bg-[#F9F9F8] border border-[#E5E5E0] rounded-2xl focus:outline-none focus:border-[#1A1A1A] transition-all"
-          />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="p-4 bg-[#F9F9F8] border border-[#E5E5E0] rounded-2xl focus:outline-none focus:border-[#1A1A1A] transition-all"
-          >
-            <option value="volunteer">Volunteer</option>
-            <option value="partner">Partner</option>
-          </select>
-          <button
-            onClick={handleInvite}
-            className="bg-[#1A1A1A] text-white px-8 py-4 rounded-2xl font-bold hover:bg-black transition-all shadow-lg shadow-black/10"
-          >
-            Send Invite
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h3 className="text-xs font-black uppercase tracking-widest text-[#999990]">Current Team</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white border border-[#E5E5E0] rounded-2xl p-6 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[#1A1A1A] text-white flex items-center justify-center font-black">F</div>
-            <div>
-              <p className="font-bold">Founder (You)</p>
-              <p className="text-sm text-[#666660]">Primary Owner</p>
-            </div>
+      {isOwner && (
+        <div className="bg-white border border-brand-line/10 rounded-3xl p-8 shadow-2xl shadow-brand-primary/5">
+          <h3 className="text-2xl font-black font-serif text-brand-ink mb-6">Invite Collaborator</h3>
+          <div className="flex flex-col md:flex-row gap-4">
+            <input
+              type="text"
+              value={newMember.displayName}
+              onChange={(e) => setNewMember({ ...newMember, displayName: e.target.value })}
+              placeholder="Partner Name"
+              className="flex-1 p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
+            />
+            <input
+              type="email"
+              value={newMember.email}
+              onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+              placeholder="Email address"
+              className="flex-1 p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
+            />
+            <select
+              value={newMember.role}
+              onChange={(e) => setNewMember({ ...newMember, role: e.target.value as TeamRole })}
+              className="p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
+            >
+              <option value="volunteer">Volunteer</option>
+              <option value="partner">Partner</option>
+            </select>
+            <button
+              onClick={handleAddMember}
+              className="bg-brand-primary text-white px-8 py-4 rounded-2xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
+            >
+              Invite
+            </button>
           </div>
+        </div>
+      )}
+
+      <div className="space-y-6">
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-brand-ink/40 ml-4 font-serif">Project Guardians</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Owner is always shown */}
+          <div className="bg-white border border-brand-primary/30 rounded-[2rem] p-6 flex flex-col items-center text-center shadow-lg shadow-brand-primary/5">
+            <div className="w-20 h-20 rounded-[2.5rem] bg-brand-primary text-white flex items-center justify-center font-black text-2xl mb-4">
+              {initiative.ownerId[0].toUpperCase()}
+            </div>
+            <h4 className="font-bold text-brand-ink mb-1 text-lg">Founder</h4>
+            <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest mb-3">Primary Owner</p>
+          </div>
+          
           {team.map((member) => (
-            <div key={member.id} className="bg-white border border-[#E5E5E0] rounded-2xl p-6 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-[#F0F0ED] text-[#1A1A1A] flex items-center justify-center font-black">
-                  {member.email[0].toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-bold">{member.email}</p>
-                  <p className="text-sm text-[#666660] capitalize">{member.role}</p>
-                </div>
+            <div key={member.id} className="bg-white border border-brand-line/10 rounded-[2rem] p-6 flex flex-col items-center text-center hover:border-brand-primary transition-all group">
+              <div className="w-20 h-20 rounded-[2.5rem] bg-brand-bg text-brand-ink flex items-center justify-center font-black text-2xl mb-4 group-hover:scale-105 transition-transform">
+                {member.displayName ? member.displayName[0].toUpperCase() : member.email[0].toUpperCase()}
               </div>
-              <button onClick={() => deleteDoc(doc(db, 'initiatives', initiative.id, 'team', member.id))} className="p-2 text-[#999990] hover:text-[#DC2626] transition-colors">
-                <Trash2 size={18} />
-              </button>
+              <h4 className="font-bold text-brand-ink mb-1 text-lg truncate w-full px-2">{member.displayName || member.email}</h4>
+              <p className="text-[10px] font-black text-brand-ink/40 uppercase tracking-widest mb-4 capitalize">{member.role}</p>
+              
+              {isOwner && (
+                <button 
+                  onClick={() => handleRemoveMember(member.id)}
+                  className="mt-2 text-brand-ink/30 hover:text-red-600 p-2 opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -589,7 +743,7 @@ function TeamTab({ initiative, team }: { initiative: Initiative; team: TeamMembe
   );
 }
 
-function ResourcesTab({ initiative, resources }: { initiative: Initiative; resources: Resource[] }) {
+function ResourcesTab({ initiative, resources, canEdit }: { initiative: Initiative; resources: Resource[]; canEdit: boolean }) {
   const [isAdding, setIsAdding] = useState(false);
   const [newResource, setNewResource] = useState({
     amount: 0,
@@ -613,6 +767,7 @@ function ResourcesTab({ initiative, resources }: { initiative: Initiative; resou
   };
 
   const handleDeleteResource = async (resourceId: string) => {
+    if (!canEdit) return;
     if (!confirm('Delete this transaction?')) return;
     try {
       await deleteDoc(doc(db, 'initiatives', initiative.id, 'resources', resourceId));
@@ -626,13 +781,13 @@ function ResourcesTab({ initiative, resources }: { initiative: Initiative; resou
   const balance = totalIn - totalOut;
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-brand-line/10 rounded-3xl p-8">
+    <div className="space-y-8 flex flex-col max-w-full overflow-hidden">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="bg-white border border-brand-line/10 rounded-3xl p-8 shadow-sm">
           <p className="text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-2">Total Inflow</p>
           <p className="text-3xl font-black text-green-600">₹{totalIn.toLocaleString()}</p>
         </div>
-        <div className="bg-white border border-brand-line/10 rounded-3xl p-8">
+        <div className="bg-white border border-brand-line/10 rounded-3xl p-8 shadow-sm">
           <p className="text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-2">Total Outflow</p>
           <p className="text-3xl font-black text-red-600">₹{totalOut.toLocaleString()}</p>
         </div>
@@ -642,22 +797,24 @@ function ResourcesTab({ initiative, resources }: { initiative: Initiative; resou
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <h3 className="text-2xl font-black font-serif text-brand-ink">Transactions</h3>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="flex items-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
-        >
-          <Plus size={18} />
-          Add Record
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-2 bg-brand-primary text-white px-6 py-4 rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 active:scale-95"
+          >
+            <Plus size={18} />
+            Add Record
+          </button>
+        )}
       </div>
 
       {isAdding && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white border-2 border-brand-primary rounded-3xl p-8 space-y-6"
+          className="bg-white border-2 border-brand-primary rounded-3xl p-6 md:p-8 space-y-6 shadow-xl shadow-brand-primary/5"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -703,46 +860,55 @@ function ResourcesTab({ initiative, resources }: { initiative: Initiative; resou
               className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
             />
           </div>
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <button onClick={() => setIsAdding(false)} className="px-6 py-3 font-bold text-brand-ink/60 hover:bg-brand-line/5 rounded-xl transition-all">Cancel</button>
-            <button onClick={handleAddResource} className="px-8 py-3 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20">Save Record</button>
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4">
+            <button onClick={() => setIsAdding(false)} className="px-6 py-4 font-bold text-brand-ink/60 hover:bg-brand-line/5 rounded-xl transition-all">Cancel</button>
+            <button onClick={handleAddResource} className="px-8 py-4 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20">Save Record</button>
           </div>
         </motion.div>
       )}
 
-      <div className="bg-white border border-brand-line/10 rounded-3xl overflow-hidden">
-        <table className="w-full text-left">
+      <div className="bg-white border border-brand-line/10 rounded-[2rem] shadow-sm overflow-x-auto">
+        <table className="w-full text-left min-w-[600px]">
           <thead className="bg-brand-bg/50 border-b border-brand-line/10">
             <tr>
-              <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-brand-ink/40">Date</th>
-              <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-brand-ink/40">Description</th>
-              <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-brand-ink/40 text-right">Amount</th>
-              <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-brand-ink/40 text-right">Actions</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-brand-ink/40">Date</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-brand-ink/40">Description</th>
+              <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-brand-ink/40 text-right">Amount</th>
+              {canEdit && <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-brand-ink/40 text-right">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-line/5">
             {resources.map((resource) => (
               <tr key={resource.id} className="hover:bg-brand-bg/30 transition-colors group">
-                <td className="px-8 py-4 text-sm text-brand-ink/60">
-                  {resource.timestamp?.toDate ? format(resource.timestamp.toDate(), 'MMM d, yyyy') : 'Just now'}
+                <td className="px-8 py-5 text-xs font-bold text-brand-ink/40">
+                   {resource.timestamp?.toDate ? format(resource.timestamp.toDate(), 'MMM d, yyyy') : 'Recent'}
                 </td>
-                <td className="px-8 py-4 font-bold text-brand-ink">{resource.description}</td>
+                <td className="px-8 py-5 font-bold text-brand-ink">{resource.description}</td>
                 <td className={cn(
-                  "px-8 py-4 font-black text-right",
+                  "px-8 py-5 font-black text-right",
                   resource.type === 'in' ? "text-green-600" : "text-red-600"
                 )}>
                   {resource.type === 'in' ? '+' : '-'} ₹{resource.amount.toLocaleString()}
                 </td>
-                <td className="px-8 py-4 text-right">
-                  <button
-                    onClick={() => handleDeleteResource(resource.id)}
-                    className="p-2 text-brand-ink/20 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </td>
+                {canEdit && (
+                  <td className="px-8 py-5 text-right">
+                    <button
+                      onClick={() => handleDeleteResource(resource.id)}
+                      className="p-2 text-brand-ink/20 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
+            {resources.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-8 py-20 text-center text-brand-ink/40 font-medium italic serif">
+                  No records yet. The impact is just beginning.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -750,7 +916,7 @@ function ResourcesTab({ initiative, resources }: { initiative: Initiative; resou
   );
 }
 
-function MilestonesTab({ initiative, milestones }: { initiative: Initiative; milestones: Milestone[] }) {
+function MilestonesTab({ initiative, milestones, canEdit }: { initiative: Initiative; milestones: Milestone[]; canEdit: boolean }) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
   const [newMilestone, setNewMilestone] = useState({ title: '', description: '' });
@@ -787,6 +953,7 @@ function MilestonesTab({ initiative, milestones }: { initiative: Initiative; mil
   };
 
   const toggleMilestone = async (milestone: Milestone) => {
+    if (!canEdit) return;
     try {
       await updateDoc(doc(db, 'initiatives', initiative.id, 'milestones', milestone.id), {
         completed: !milestone.completed,
@@ -799,26 +966,28 @@ function MilestonesTab({ initiative, milestones }: { initiative: Initiative; mil
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-black font-serif text-brand-ink">Milestones</h3>
-        <button
-          onClick={() => {
-            setEditingMilestone(null);
-            setNewMilestone({ title: '', description: '' });
-            setIsAdding(true);
-          }}
-          className="flex items-center gap-2 bg-brand-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
-        >
-          <Plus size={18} />
-          Add Milestone
-        </button>
-      </div>
+      {canEdit && (
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h3 className="text-2xl font-black font-serif text-brand-ink">Project Milestones</h3>
+          <button
+            onClick={() => {
+              setEditingMilestone(null);
+              setNewMilestone({ title: '', description: '' });
+              setIsAdding(true);
+            }}
+            className="flex items-center gap-2 bg-brand-primary text-white px-6 py-4 rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 active:scale-95"
+          >
+            <Plus size={18} />
+            Set Milestone
+          </button>
+        </div>
+      )}
 
       {(isAdding || editingMilestone) && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-white border-2 border-brand-primary rounded-3xl p-8 space-y-6"
+          className="bg-white border-2 border-brand-primary rounded-3xl p-6 md:p-8 space-y-6 shadow-xl shadow-brand-primary/5"
         >
           <h4 className="text-xl font-black text-brand-ink">{editingMilestone ? 'Edit Milestone' : 'New Milestone'}</h4>
           <div>
@@ -837,104 +1006,206 @@ function MilestonesTab({ initiative, milestones }: { initiative: Initiative; mil
               value={newMilestone.description}
               onChange={(e) => setNewMilestone({ ...newMilestone, description: e.target.value })}
               rows={2}
-              className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-medium"
+              className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-medium text-sm italic"
             />
           </div>
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <button onClick={() => { setIsAdding(false); setEditingMilestone(null); }} className="px-6 py-3 font-bold text-brand-ink/60 hover:bg-brand-line/5 rounded-xl transition-all">Cancel</button>
-            <button onClick={handleSaveMilestone} className="px-8 py-3 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-4">
+            <button onClick={() => { setIsAdding(false); setEditingMilestone(null); }} className="px-6 py-4 font-bold text-brand-ink/60 hover:bg-brand-line/5 rounded-xl transition-all">Cancel</button>
+            <button onClick={handleSaveMilestone} className="px-8 py-4 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20">
               {editingMilestone ? 'Update Milestone' : 'Add Milestone'}
             </button>
           </div>
         </motion.div>
       )}
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4">
+        {milestones.length === 0 && !isAdding && (
+          <div className="text-center py-20 bg-white border border-brand-line/10 rounded-3xl text-brand-ink/40 font-medium italic">
+            No milestones defined yet. What are you aiming for?
+          </div>
+        )}
         {milestones.map((milestone) => (
           <div
             key={milestone.id}
             className={cn(
-              "bg-white border rounded-2xl p-6 flex items-center gap-6 transition-all group",
-              milestone.completed ? "border-green-600 bg-green-50/30" : "border-brand-line/10 hover:border-brand-primary"
+              "bg-white border rounded-[2rem] p-6 flex flex-col sm:flex-row items-center gap-6 transition-all group overflow-hidden",
+              milestone.completed ? "border-green-600/30 bg-green-50/50" : "border-brand-line/10 hover:border-brand-primary/40"
             )}
           >
             <div 
               onClick={() => toggleMilestone(milestone)}
               className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer",
-                milestone.completed ? "bg-green-600 text-white" : "border-2 border-brand-line/10 text-brand-line/20"
+                "w-12 h-12 rounded-[1.25rem] flex items-center justify-center transition-all cursor-pointer flex-shrink-0",
+                milestone.completed ? "bg-green-600 text-white shadow-lg shadow-green-600/20" : "bg-brand-bg border-2 border-brand-line/10 text-brand-ink/10"
               )}
             >
-              {milestone.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
+              <CheckCircle2 size={24} />
             </div>
-            <div className="flex-1" onClick={() => toggleMilestone(milestone)}>
-              <h4 className={cn("font-bold text-lg text-brand-ink", milestone.completed && "line-through text-green-600/60")}>{milestone.title}</h4>
-              {milestone.description && <p className="text-sm text-brand-ink/60">{milestone.description}</p>}
+            <div className="flex-1 text-center sm:text-left min-w-0 w-full" onClick={() => toggleMilestone(milestone)}>
+              <h4 className={cn("font-bold text-xl text-brand-ink leading-tight mb-1", milestone.completed && "line-through opacity-40")}>
+                {milestone.title}
+              </h4>
+              {milestone.description && <p className="text-sm text-brand-ink/50 font-medium italic serif line-clamp-1">{milestone.description}</p>}
             </div>
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => {
-                  setEditingMilestone(milestone);
-                  setNewMilestone({ title: milestone.title, description: milestone.description || '' });
-                }}
-                className="p-2 text-brand-ink/40 hover:text-brand-primary transition-colors"
-              >
-                <Edit2 size={18} />
-              </button>
-              <button
-                onClick={() => handleDeleteMilestone(milestone.id)}
-                className="p-2 text-brand-ink/40 hover:text-red-500 transition-colors"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
+            {canEdit && (
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => {
+                    setEditingMilestone(milestone);
+                    setNewMilestone({ title: milestone.title, description: milestone.description || '' });
+                    setIsAdding(false);
+                  }}
+                  className="p-2.5 bg-brand-bg text-brand-ink/40 hover:text-brand-primary hover:bg-white border border-transparent hover:border-brand-primary/20 rounded-xl transition-all"
+                >
+                  <Edit2 size={16} />
+                </button>
+                <button
+                  onClick={() => handleDeleteMilestone(milestone.id)}
+                  className="p-2.5 bg-brand-bg text-brand-ink/40 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-xl transition-all"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function LogsTab({ logs }: { logs: EditLog[] }) {
+  return (
+    <div className="gap-6 flex flex-col max-w-full overflow-hidden">
+      <div className="bg-white border border-brand-line/10 rounded-[2.5rem] p-8 shadow-2xl shadow-brand-primary/5">
+        <h3 className="text-3xl font-black font-serif text-brand-ink mb-2 leading-tight">Architecture Ledger</h3>
+        <p className="text-brand-ink/60 font-medium italic serif">Every architectural pivot and strategic update is recorded here for total collaborative transparency.</p>
+      </div>
+
+      <div className="space-y-4">
+        {logs.map((log) => (
+          <motion.div 
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            key={log.id} 
+            className="bg-white border border-brand-line/10 rounded-[1.5rem] p-5 flex items-start gap-5 hover:border-brand-primary/30 transition-all group overflow-hidden"
+          >
+            <div className="w-10 h-10 rounded-xl bg-brand-bg flex items-center justify-center text-brand-primary/40 group-hover:text-brand-primary flex-shrink-0 transition-colors">
+              <History size={20} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-3 mb-1">
+                <h4 className="font-bold text-brand-ink">{log.action}</h4>
+                <span className="text-[9px] font-black px-2 py-0.5 bg-brand-bg rounded-md text-brand-ink/40 uppercase tracking-widest truncate">
+                  {log.userName}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-bold text-brand-ink/30 italic">
+                <Clock size={12} />
+                {log.timestamp?.toDate ? format(log.timestamp.toDate(), 'MMM d, h:mm a') : 'Just now'}
+              </div>
+            </div>
+          </motion.div>
+        ))}
+        {logs.length === 0 && (
+          <div className="text-center py-24 bg-white border border-brand-line/10 border-dashed rounded-[3rem] text-brand-ink/30 font-medium italic serif">
+            The scrolls are empty. The architecture remains untouched.
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 function ProofTab({ initiative, actions }: { initiative: Initiative; actions: Action[] }) {
+  const proofActions = actions.filter(a => a.proofText || a.proofUrl);
+
   return (
-    <div className="space-y-10">
-      <div className="bg-[#1A1A1A] text-white rounded-3xl p-10 shadow-xl shadow-black/10 relative overflow-hidden">
-        <div className="relative z-10">
-          <h3 className="text-3xl font-black mb-4">Proof of Work</h3>
-          <p className="text-white/60 text-lg max-w-xl">
-            This is your automatically generated timeline of real impact. Use this to build credibility and show the world what you've achieved.
+    <div className="space-y-12 flex flex-col max-w-full overflow-hidden">
+      <div className="bg-brand-ink text-white rounded-[3rem] p-10 md:p-14 shadow-2xl relative overflow-hidden">
+        <div className="relative z-10 max-w-xl">
+          <h3 className="text-4xl md:text-5xl font-black mb-6 serif leading-[1.1]">The Vault of <br/><span className="text-brand-primary italic">Impact.</span></h3>
+          <p className="text-white/50 text-lg font-medium italic serif leading-relaxed">
+            Truth isn't declared; it's proven. This is your verifiable record of existence—manual evidence of real-world changes.
           </p>
         </div>
-        <div className="absolute top-0 right-0 p-10 opacity-10">
-          <TrendingUp size={160} />
+        <div className="absolute top-0 right-0 p-10 opacity-5 -mr-10 -mt-10 rotate-12">
+          <FileText size={240} />
         </div>
+        <div className="absolute bottom-0 left-0 w-full h-full bg-gradient-to-t from-brand-ink to-transparent opacity-50" />
       </div>
 
-      <div className="relative pl-8 space-y-12 before:absolute before:left-[15px] before:top-0 before:bottom-0 before:w-0.5 before:bg-[#E5E5E0]">
-        {actions.map((action, index) => (
-          <div key={action.id} className="relative">
-            <div className="absolute -left-[25px] top-2 w-4 h-4 rounded-full bg-[#1A1A1A] border-4 border-[#F9F9F8]" />
-            <div className="bg-white border border-[#E5E5E0] rounded-2xl p-8 hover:border-[#1A1A1A] transition-all shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-black uppercase tracking-widest text-[#999990]">
-                  {action.timestamp?.toDate ? format(action.timestamp.toDate(), 'MMMM d, yyyy') : 'Just now'}
-                </span>
-                <span className="px-3 py-1 bg-[#F0F0ED] rounded-full text-[10px] font-black uppercase tracking-widest">{action.category}</span>
-              </div>
-              <h4 className="text-xl font-bold mb-2">{action.description}</h4>
-              {action.notes && <p className="text-[#666660] leading-relaxed">{action.notes}</p>}
-              <div className="mt-6 flex items-center gap-4 text-xs font-bold text-[#999990]">
-                <span className="flex items-center gap-1"><Clock size={14} /> {action.timeSpent} mins invested</span>
-                <span className="flex items-center gap-1"><Users size={14} /> Logged by Founder</span>
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {proofActions.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="col-span-full text-center py-32 bg-white border border-brand-line/10 rounded-[4rem] px-6"
+          >
+            <div className="w-24 h-24 bg-brand-bg rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 text-brand-primary/20">
+              <FileText size={48} />
             </div>
-          </div>
-        ))}
+            <p className="text-2xl font-black text-brand-ink mb-3 serif">The Vault is unlocked.</p>
+            <p className="text-brand-ink/50 font-medium italic serif max-w-xs mx-auto">Log a new work action with text proof or a URL evidence link to build your case.</p>
+          </motion.div>
+        ) : (
+          proofActions.map((action, idx) => (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              key={action.id}
+              className="bg-white border border-brand-line/10 rounded-[2.5rem] p-8 hover:shadow-[0_32px_64px_-16px_rgba(var(--color-brand-primary-rgb),0.1)] transition-all group relative overflow-hidden"
+            >
+              <div className="flex items-center justify-between mb-8">
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] px-3 py-1.5 bg-brand-bg text-brand-ink/40 rounded-full">
+                  {action.category}
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-brand-ink/20 italic">
+                  {action.timestamp?.toDate ? format(action.timestamp.toDate(), 'MMMM d, yyyy') : ''}
+                </span>
+              </div>
+              
+              <h4 className="text-2xl font-black text-brand-ink mb-6 serif leading-tight group-hover:text-brand-primary transition-colors">
+                {action.description}
+              </h4>
+              
+              {action.proofText && (
+                <div className="bg-brand-bg/50 p-6 rounded-[1.5rem] mb-6 relative border border-brand-line/5">
+                  <p className="text-sm text-brand-ink/70 leading-relaxed italic relative z-10 serif font-medium">"{action.proofText}"</p>
+                  <div className="absolute top-2 left-2 text-brand-primary/5 select-none -z-10">
+                    <FileText size={48} />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-4 mt-auto pt-6 border-t border-brand-line/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center text-[10px] font-black">
+                    {action.userName ? action.userName[0].toUpperCase() : 'M'}
+                  </div>
+                  <p className="text-[10px] font-black text-brand-ink/30 uppercase tracking-widest">
+                    Verified by {action.userName || 'Member'}
+                  </p>
+                </div>
+                {action.proofUrl && (
+                  <a 
+                    href={action.proofUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-5 py-3 bg-brand-primary text-white rounded-xl text-xs font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/10 active:scale-95"
+                  >
+                    <ExternalLink size={14} />
+                    View Proof
+                  </a>
+                )}
+              </div>
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   );
 }
 
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
-}
+

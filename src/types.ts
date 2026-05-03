@@ -30,19 +30,31 @@ export interface Action {
   id: string;
   initiativeId: string;
   userId: string;
+  userName: string;
   description: string;
   category: ActionCategory;
   timeSpent: number; // minutes
   notes: string;
   timestamp: any; // Firestore Timestamp
-  proofUrl?: string;
-  proofType?: string;
+  proofText?: string;
+  proofUrl?: string; // Manual URL if applicable
+}
+
+export interface EditLog {
+  id: string;
+  initiativeId: string;
+  userId: string;
+  userName: string;
+  action: string; // e.g., 'Updated Initiative Details', 'Added Resource'
+  changes?: string; // JSON string of changes
+  timestamp: any;
 }
 
 export interface TeamMember {
   id: string;
   initiativeId: string;
   userId: string;
+  displayName: string;
   email: string;
   role: TeamRole;
   invitedAt: any;
@@ -56,6 +68,7 @@ export interface Resource {
   amount: number;
   description: string;
   timestamp: any;
+  addedBy: string;
 }
 
 export interface Milestone {

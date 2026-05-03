@@ -10,7 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import InitiativeBuilder from './pages/InitiativeBuilder';
 import InitiativeDetails from './pages/InitiativeDetails';
-import PublicProfile from './pages/PublicProfile';
+import Guide from './pages/Guide';
 import Layout from './components/Layout';
 
 // Auth Context
@@ -78,7 +78,6 @@ export default function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/p/:initiativeId" element={<PublicProfile />} />
           <Route
             path="/"
             element={
@@ -90,6 +89,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="builder" element={<InitiativeBuilder />} />
             <Route path="initiative/:id" element={<InitiativeDetails />} />
+            <Route path="guide" element={<Guide />} />
           </Route>
         </Routes>
       </Router>

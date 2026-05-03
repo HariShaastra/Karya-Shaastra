@@ -45,6 +45,11 @@ service cloud.firestore {
       );
     }
 
+    function isValidEditLog(data) {
+      return data.keys().hasAll(['id', 'initiativeId', 'userId', 'userName', 'action', 'timestamp']) &&
+             data.action is string && data.action.size() > 0;
+    }
+
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'email']) &&
              data.uid is string &&
@@ -90,16 +95,22 @@ service cloud.firestore {
     }
 
     match /initiatives/{initiativeId} {
-      allow read: if true; // Public profiles
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() && isValidInitiative(request.resource.data) && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isInitiativeOwner(initiativeId) && isValidInitiative(request.resource.data);
+      allow update: if isTeamMember(initiativeId) && isValidInitiative(request.resource.data);
       allow delete: if isInitiativeOwner(initiativeId);
 
       match /actions/{actionId} {
-        allow read: if true; // Public proof of work
+        allow read: if isTeamMember(initiativeId);
         allow create: if isTeamMember(initiativeId) && isValidAction(request.resource.data) && request.resource.data.userId == request.auth.uid;
         allow update: if isTeamMember(initiativeId) && isValidAction(request.resource.data) && (resource.data.userId == request.auth.uid || isInitiativeOwner(initiativeId));
         allow delete: if isTeamMember(initiativeId) && (resource.data.userId == request.auth.uid || isInitiativeOwner(initiativeId));
+      }
+
+      match /editLogs/{logId} {
+        allow read: if isTeamMember(initiativeId);
+        allow create: if isTeamMember(initiativeId) && isValidEditLog(request.resource.data);
+        allow update, delete: if false;
       }
 
       match /team/{memberId} {

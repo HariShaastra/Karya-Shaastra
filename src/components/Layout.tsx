@@ -1,15 +1,11 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, LogOut, User, Menu, X } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, LogOut, BookOpen, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { logOut } from '../firebase';
 import { useAuth } from '../App';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '../lib/utils';
 import Logo from './Logo';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export default function Layout() {
   const { profile } = useAuth();
@@ -25,12 +21,13 @@ export default function Layout() {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
     { name: 'New Initiative', path: '/builder', icon: PlusCircle },
+    { name: 'User Guide', path: '/guide', icon: BookOpen },
   ];
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-ink font-sans">
       {/* Sidebar for Desktop */}
-      <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 bg-white border-r border-brand-line/10 z-50">
+      <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 bg-white border-r border-brand-line/10 z-50">
         <div className="p-6">
           <Link to="/" className="flex items-center gap-3">
             <Logo className="w-10 h-10" />
@@ -75,7 +72,7 @@ export default function Layout() {
       </aside>
 
       {/* Mobile Header */}
-      <header className="md:hidden flex items-center justify-between p-4 bg-white border-b border-brand-line/10 sticky top-0 z-50">
+      <header className="md:hidden flex items-center justify-between p-4 bg-white border-b border-brand-line/10 sticky top-0 z-50 w-full">
         <Link to="/" className="flex items-center gap-2">
           <Logo className="w-8 h-8" />
           <h1 className="text-lg font-bold tracking-tight serif text-brand-ink">Karya Shaastra</h1>
@@ -86,37 +83,60 @@ export default function Layout() {
       </header>
 
       {/* Mobile Menu Overlay */}
-      {isMenuOpen && (
-        <div className="md:hidden fixed inset-0 bg-brand-bg z-40 pt-20 px-6">
-          <nav className="space-y-4">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsMenuOpen(false)}
-                className={cn(
-                  "flex items-center gap-4 p-4 rounded-2xl text-lg font-medium",
-                  location.pathname === item.path ? "bg-brand-primary text-white" : "text-brand-ink/60"
-                )}
-              >
-                <item.icon size={24} />
-                {item.name}
-              </Link>
-            ))}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-4 w-full p-4 rounded-2xl text-lg font-medium text-red-600"
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMenuOpen(false)}
+              className="md:hidden fixed inset-0 bg-brand-ink/40 backdrop-blur-sm z-40"
+            />
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              className="md:hidden fixed right-0 inset-y-0 w-64 bg-white z-50 p-6 flex flex-col shadow-2xl"
             >
-              <LogOut size={24} />
-              Logout
-            </button>
-          </nav>
-        </div>
-      )}
+              <div className="flex justify-end mb-8">
+                <button onClick={() => setIsMenuOpen(false)} className="p-2">
+                  <X size={24} />
+                </button>
+              </div>
+              <nav className="flex-1 space-y-4">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-4 p-4 rounded-2xl text-lg font-medium",
+                      location.pathname === item.path ? "bg-brand-primary text-white shadow-lg shadow-brand-primary/20" : "text-brand-ink/60 hover:bg-brand-bg"
+                    )}
+                  >
+                    <item.icon size={24} />
+                    {item.name}
+                  </Link>
+                ))}
+              </nav>
+              <div className="pt-6 border-t border-brand-line/10">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-4 w-full p-4 rounded-2xl text-lg font-medium text-red-600 hover:bg-red-50"
+                >
+                  <LogOut size={24} />
+                  Logout
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main Content */}
-      <main className="md:pl-64 min-h-screen">
-        <div className="max-w-5xl mx-auto p-6 md:p-10">
+      <main className="md:ml-64 flex-1">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 lg:p-12">
           <Outlet />
         </div>
       </main>

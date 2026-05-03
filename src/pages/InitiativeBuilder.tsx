@@ -5,7 +5,8 @@ import { db } from '../firebase';
 import { useAuth } from '../App';
 import { InitiativeType, InitiativeStage } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, ArrowRight, Check, Target, Users, Zap, Briefcase, Heart, Globe } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Briefcase, Heart, Globe } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 const STEPS = [
   { id: 'type', title: 'Initiative Type', description: 'What kind of impact are you building?' },
@@ -252,6 +253,4 @@ export default function InitiativeBuilder() {
   );
 }
 
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
-}
+
