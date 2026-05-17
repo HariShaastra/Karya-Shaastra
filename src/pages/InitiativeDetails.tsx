@@ -128,40 +128,41 @@ export default function InitiativeDetails() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 bg-white border border-brand-line/10 rounded-[2.5rem] p-8 shadow-2xl shadow-brand-primary/5">
-        <div className="flex flex-col md:flex-row gap-8 items-center flex-1">
-          <div className="flex-shrink-0">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 bg-white border border-brand-line/10 rounded-[2.5rem] p-6 sm:p-10 shadow-2xl shadow-brand-primary/5 overflow-hidden">
+        <div className="flex flex-col sm:flex-row gap-6 sm:gap-10 items-center sm:items-start flex-1 min-w-0">
+          <div className="flex-shrink-0 group">
             <Saathi 
               emotion={initiative.stage === 'growing' ? 'excited' : 'happy'} 
               message={initiative.stage === 'idea' ? "Let's turn this idea into reality!" : "Great progress! Keep going!"} 
             />
           </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-3 mb-2">
+          <div className="text-center sm:text-left min-w-0">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-3">
               <span className={cn(
-                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                initiative.type === 'profit' ? "bg-blue-50 text-blue-600" :
-                initiative.type === 'non-profit' ? "bg-green-50 text-green-600" :
-                "bg-red-50 text-red-600"
+                "px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                initiative.type === 'profit' ? "bg-blue-50 text-blue-600 border border-blue-100" :
+                initiative.type === 'non-profit' ? "bg-green-50 text-green-600 border border-green-100" :
+                "bg-red-50 text-red-600 border border-red-100"
               )}>
                 {initiative.type}
               </span>
-              <span className="text-[10px] font-black text-brand-ink/40 uppercase tracking-widest">
+              <span className="text-[10px] font-black text-brand-ink/30 uppercase tracking-widest bg-brand-bg px-3 py-1 rounded-full">
                 Stage: {initiative.stage}
               </span>
             </div>
-            <h1 className="text-4xl font-black tracking-tight serif text-brand-ink mb-2">{initiative.name}</h1>
-            <p className="text-brand-ink/60 font-medium italic serif line-clamp-1">{initiative.problemStatement}</p>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight serif text-brand-ink mb-3 leading-tight break-words">{initiative.name}</h1>
+            <p className="text-brand-ink/50 font-medium italic serif line-clamp-3 sm:line-clamp-2 max-w-2xl break-words">{initiative.problemStatement}</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        
+        <div className="flex flex-wrap items-center justify-center lg:justify-end gap-3 w-full lg:w-auto pt-6 lg:pt-0 border-t lg:border-t-0 border-brand-line/5">
           {canEdit && (
             <button
               onClick={() => setIsEditingInitiative(true)}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white border border-brand-line/10 rounded-2xl font-bold hover:border-brand-primary transition-all text-brand-ink active:scale-95"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white border border-brand-line/10 rounded-2xl font-bold hover:border-brand-primary transition-all text-brand-ink active:scale-95 shadow-sm group min-w-[120px]"
             >
-              <Edit2 size={18} />
-              Edit
+              <Edit2 size={18} className="group-hover:text-brand-primary transition-colors" />
+              <span>Edit</span>
             </button>
           )}
           <button
@@ -170,10 +171,10 @@ export default function InitiativeDetails() {
               navigator.clipboard.writeText(url);
               alert('Collaboration link copied!');
             }}
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white border border-brand-line/10 text-brand-ink rounded-2xl font-bold hover:border-brand-primary transition-all active:scale-95"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white border border-brand-line/10 text-brand-ink rounded-2xl font-bold hover:border-brand-primary transition-all active:scale-95 shadow-sm group min-w-[140px]"
           >
-            <Share2 size={18} />
-            Copy Link
+            <Share2 size={18} className="group-hover:text-brand-primary transition-colors" />
+            <span>Copy Link</span>
           </button>
           <a
             href={`https://wa.me/?text=${encodeURIComponent(
@@ -185,10 +186,10 @@ export default function InitiativeDetails() {
             )}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-green-500 text-white rounded-2xl font-bold hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-green-500 text-white rounded-2xl font-bold hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 active:scale-95 min-w-[200px]"
           >
             <Zap size={18} />
-            Share WhatsApp
+            <span>Share WhatsApp</span>
           </a>
         </div>
       </header>
@@ -308,7 +309,7 @@ export default function InitiativeDetails() {
       </div>
 
       {/* Tab Content */}
-      <div className="min-h-[400px]">
+      <div className="min-h-[200px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -336,11 +337,11 @@ export default function InitiativeDetails() {
 
 function OverviewTab({ initiative }: { initiative: Initiative }) {
   const fields = [
-    { label: 'Problem Statement', value: initiative.problemStatement },
-    { label: 'Target Group', value: initiative.targetGroup },
-    { label: 'Proposed Solution', value: initiative.proposedSolution },
-    { label: 'Why this initiative?', value: initiative.why },
-    { label: 'Expected Outcome', value: initiative.expectedOutcome },
+    { label: 'The Problem', value: initiative.problemStatement },
+    { label: 'Who is this for?', value: initiative.targetGroup },
+    { label: 'The Solution', value: initiative.proposedSolution },
+    { label: 'The Motivation', value: initiative.why },
+    { label: 'The Goal', value: initiative.expectedOutcome },
   ];
 
   return (
@@ -388,8 +389,8 @@ function PathwaysTab({ initiative, milestones }: { initiative: Initiative; miles
   return (
     <div className="space-y-6">
       <div className="bg-[#1A1A1A] text-white rounded-3xl p-8 shadow-xl shadow-black/10">
-        <h3 className="text-2xl font-black mb-2">Launch Pathway</h3>
-        <p className="text-white/60">Follow these steps to move from idea to pilot.</p>
+        <h3 className="text-2xl font-black mb-2">Getting Started</h3>
+        <p className="text-white/60">Simple steps to help your project grow.</p>
       </div>
 
       <div className="space-y-4">
@@ -463,7 +464,7 @@ function ActionsTab({ initiative, actions, canEdit }: { initiative: Initiative; 
     <div className="space-y-8">
       {canEdit && (
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h3 className="text-2xl font-black font-serif text-brand-ink">Daily Log</h3>
+          <h3 className="text-2xl font-black font-serif text-brand-ink">Activity Log</h3>
           <button
             onClick={() => {
               setEditingAction(null);
@@ -473,7 +474,7 @@ function ActionsTab({ initiative, actions, canEdit }: { initiative: Initiative; 
             className="flex items-center gap-2 bg-brand-primary text-white px-6 py-4 rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 active:scale-95"
           >
             <Plus size={18} />
-            Log Work
+            Record Activity
           </button>
         </div>
       )}
@@ -484,7 +485,7 @@ function ActionsTab({ initiative, actions, canEdit }: { initiative: Initiative; 
           animate={{ opacity: 1, scale: 1 }}
           className="bg-white border-2 border-brand-primary rounded-3xl p-6 md:p-8 space-y-6 shadow-xl shadow-brand-primary/5"
         >
-          <h4 className="text-xl font-black text-brand-ink">{editingAction ? 'Edit Action' : 'Log New Action'}</h4>
+          <h4 className="text-xl font-black text-brand-ink">{editingAction ? 'Edit Activity' : 'Record New Activity'}</h4>
           <div>
             <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">What did you do?</label>
             <input
@@ -522,7 +523,7 @@ function ActionsTab({ initiative, actions, canEdit }: { initiative: Initiative; 
           </div>
           <div className="grid grid-cols-1 gap-6">
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Proof of Work (Text Evidence)</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Evidence Description (Text)</label>
               <textarea
                 value={newAction.proofText}
                 onChange={(e) => setNewAction({ ...newAction, proofText: e.target.value })}
@@ -532,7 +533,7 @@ function ActionsTab({ initiative, actions, canEdit }: { initiative: Initiative; 
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Proof Link (URL)</label>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Link to Evidence (URL)</label>
               <input
                 type="url"
                 value={newAction.proofUrl}
@@ -607,7 +608,7 @@ function ActionsTab({ initiative, actions, canEdit }: { initiative: Initiative; 
               
               {action.proofText && (
                 <div className="bg-brand-primary/5 border border-brand-primary/10 rounded-2xl p-4 mb-3">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-brand-primary mb-1">Evidence Summary</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-brand-primary mb-1">Evidence</p>
                   <p className="text-sm font-medium text-brand-ink/70 italic serif leading-relaxed">"{action.proofText}"</p>
                 </div>
               )}
@@ -620,7 +621,7 @@ function ActionsTab({ initiative, actions, canEdit }: { initiative: Initiative; 
                   className="inline-flex items-center gap-2 text-xs font-bold text-brand-primary hover:underline mb-3"
                 >
                   <ExternalLink size={14} />
-                  View Uploaded Proof
+                  View Evidence
                 </a>
               )}
 
@@ -673,42 +674,53 @@ function TeamTab({ initiative, team, isOwner }: { initiative: Initiative; team: 
     <div className="space-y-8">
       {isOwner && (
         <div className="bg-white border border-brand-line/10 rounded-3xl p-8 shadow-2xl shadow-brand-primary/5">
-          <h3 className="text-2xl font-black font-serif text-brand-ink mb-6">Invite Collaborator</h3>
-          <div className="flex flex-col md:flex-row gap-4">
-            <input
-              type="text"
-              value={newMember.displayName}
-              onChange={(e) => setNewMember({ ...newMember, displayName: e.target.value })}
-              placeholder="Partner Name"
-              className="flex-1 p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
-            />
-            <input
-              type="email"
-              value={newMember.email}
-              onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-              placeholder="Email address"
-              className="flex-1 p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
-            />
-            <select
-              value={newMember.role}
-              onChange={(e) => setNewMember({ ...newMember, role: e.target.value as TeamRole })}
-              className="p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
-            >
-              <option value="volunteer">Volunteer</option>
-              <option value="partner">Partner</option>
-            </select>
-            <button
-              onClick={handleAddMember}
-              className="bg-brand-primary text-white px-8 py-4 rounded-2xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20"
-            >
-              Invite
-            </button>
+          <h3 className="text-2xl font-black font-serif text-brand-ink mb-6">Invite Partner</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="md:col-span-1">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-2">Partner Name</label>
+              <input
+                type="text"
+                value={newMember.displayName}
+                onChange={(e) => setNewMember({ ...newMember, displayName: e.target.value })}
+                placeholder="e.g. John Doe"
+                className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-2">Email address</label>
+              <input
+                type="email"
+                value={newMember.email}
+                onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                placeholder="email@example.com"
+                className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-2">Role</label>
+              <select
+                value={newMember.role}
+                onChange={(e) => setNewMember({ ...newMember, role: e.target.value as TeamRole })}
+                className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold"
+              >
+                <option value="volunteer">Volunteer</option>
+                <option value="partner">Partner</option>
+              </select>
+            </div>
+            <div className="md:col-span-1">
+              <button
+                onClick={handleAddMember}
+                className="w-full bg-brand-primary text-white px-8 py-4 rounded-2xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 active:scale-95"
+              >
+                Send Invite
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       <div className="space-y-6">
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-brand-ink/40 ml-4 font-serif">Project Guardians</h3>
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-brand-ink/40 ml-4 font-serif">Project Team</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Owner is always shown */}
           <div className="bg-white border border-brand-primary/30 rounded-[2rem] p-6 flex flex-col items-center text-center shadow-lg shadow-brand-primary/5">
@@ -798,14 +810,14 @@ function ResourcesTab({ initiative, resources, canEdit }: { initiative: Initiati
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h3 className="text-2xl font-black font-serif text-brand-ink">Transactions</h3>
+        <h3 className="text-2xl font-black font-serif text-brand-ink">History</h3>
         {canEdit && (
           <button
             onClick={() => setIsAdding(true)}
             className="flex items-center gap-2 bg-brand-primary text-white px-6 py-4 rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 active:scale-95"
           >
             <Plus size={18} />
-            Add Record
+            Add Entry
           </button>
         )}
       </div>
@@ -968,7 +980,7 @@ function MilestonesTab({ initiative, milestones, canEdit }: { initiative: Initia
     <div className="space-y-8">
       {canEdit && (
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h3 className="text-2xl font-black font-serif text-brand-ink">Project Milestones</h3>
+          <h3 className="text-2xl font-black font-serif text-brand-ink">Project Goals</h3>
           <button
             onClick={() => {
               setEditingMilestone(null);
@@ -978,7 +990,7 @@ function MilestonesTab({ initiative, milestones, canEdit }: { initiative: Initia
             className="flex items-center gap-2 bg-brand-primary text-white px-6 py-4 rounded-xl font-bold hover:bg-brand-primary/90 transition-all shadow-lg shadow-brand-primary/20 active:scale-95"
           >
             <Plus size={18} />
-            Set Milestone
+            Add Goal
           </button>
         </div>
       )}
@@ -989,9 +1001,9 @@ function MilestonesTab({ initiative, milestones, canEdit }: { initiative: Initia
           animate={{ opacity: 1, scale: 1 }}
           className="bg-white border-2 border-brand-primary rounded-3xl p-6 md:p-8 space-y-6 shadow-xl shadow-brand-primary/5"
         >
-          <h4 className="text-xl font-black text-brand-ink">{editingMilestone ? 'Edit Milestone' : 'New Milestone'}</h4>
+          <h4 className="text-xl font-black text-brand-ink">{editingMilestone ? 'Edit Goal' : 'New Goal'}</h4>
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Milestone Title</label>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Goal Title</label>
             <input
               type="text"
               value={newMilestone.title}
@@ -1078,8 +1090,8 @@ function LogsTab({ logs }: { logs: EditLog[] }) {
   return (
     <div className="gap-6 flex flex-col max-w-full overflow-hidden">
       <div className="bg-white border border-brand-line/10 rounded-[2.5rem] p-8 shadow-2xl shadow-brand-primary/5">
-        <h3 className="text-3xl font-black font-serif text-brand-ink mb-2 leading-tight">Architecture Ledger</h3>
-        <p className="text-brand-ink/60 font-medium italic serif">Every architectural pivot and strategic update is recorded here for total collaborative transparency.</p>
+        <h3 className="text-3xl font-black font-serif text-brand-ink mb-2 leading-tight">Project History</h3>
+        <p className="text-brand-ink/60 font-medium italic serif">Every update made to the project details is recorded here.</p>
       </div>
 
       <div className="space-y-4">
@@ -1109,7 +1121,7 @@ function LogsTab({ logs }: { logs: EditLog[] }) {
         ))}
         {logs.length === 0 && (
           <div className="text-center py-24 bg-white border border-brand-line/10 border-dashed rounded-[3rem] text-brand-ink/30 font-medium italic serif">
-            The scrolls are empty. The architecture remains untouched.
+            No history yet. The project details haven't been changed.
           </div>
         )}
       </div>
@@ -1124,9 +1136,9 @@ function ProofTab({ initiative, actions }: { initiative: Initiative; actions: Ac
     <div className="space-y-12 flex flex-col max-w-full overflow-hidden">
       <div className="bg-brand-ink text-white rounded-[3rem] p-10 md:p-14 shadow-2xl relative overflow-hidden">
         <div className="relative z-10 max-w-xl">
-          <h3 className="text-4xl md:text-5xl font-black mb-6 serif leading-[1.1]">The Vault of <br/><span className="text-brand-primary italic">Impact.</span></h3>
+          <h3 className="text-4xl md:text-5xl font-black mb-6 serif leading-[1.1]">Your Impact <br/><span className="text-brand-primary italic">Record.</span></h3>
           <p className="text-white/50 text-lg font-medium italic serif leading-relaxed">
-            Truth isn't declared; it's proven. This is your verifiable record of existence—manual evidence of real-world changes.
+            This is where you show the real work you've done. Keep track of your evidence here to build your story of impact.
           </p>
         </div>
         <div className="absolute top-0 right-0 p-10 opacity-5 -mr-10 -mt-10 rotate-12">
@@ -1140,13 +1152,13 @@ function ProofTab({ initiative, actions }: { initiative: Initiative; actions: Ac
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="col-span-full text-center py-32 bg-white border border-brand-line/10 rounded-[4rem] px-6"
+            className="col-span-full text-center py-16 sm:py-24 bg-white border border-brand-line/10 rounded-[4rem] px-6 shadow-sm"
           >
-            <div className="w-24 h-24 bg-brand-bg rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 text-brand-primary/20">
-              <FileText size={48} />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-brand-bg rounded-[2rem] flex items-center justify-center mx-auto mb-6 text-brand-primary/20">
+              <FileText size={40} />
             </div>
-            <p className="text-2xl font-black text-brand-ink mb-3 serif">The Vault is unlocked.</p>
-            <p className="text-brand-ink/50 font-medium italic serif max-w-xs mx-auto">Log a new work action with text proof or a URL evidence link to build your case.</p>
+            <p className="text-xl sm:text-2xl font-black text-brand-ink mb-2 serif">Your record is ready.</p>
+            <p className="text-sm sm:text-base text-brand-ink/50 font-medium italic serif max-w-xs mx-auto">Record a new activity with evidence to show your progress.</p>
           </motion.div>
         ) : (
           proofActions.map((action, idx) => (

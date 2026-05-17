@@ -9,10 +9,10 @@ import { ArrowLeft, ArrowRight, Check, Briefcase, Heart, Globe } from 'lucide-re
 import { cn } from '../lib/utils';
 
 const STEPS = [
-  { id: 'type', title: 'Initiative Type', description: 'What kind of impact are you building?' },
-  { id: 'basics', title: 'Core Identity', description: 'Name and the problem you solve.' },
-  { id: 'solution', title: 'The Strategy', description: 'How do you plan to solve it?' },
-  { id: 'outcome', title: 'Expected Impact', description: 'What does success look like?' },
+  { id: 'type', title: 'Project Type', description: 'What kind of project are you starting?' },
+  { id: 'basics', title: 'The Basics', description: 'Give your project a name and define the problem.' },
+  { id: 'solution', title: 'Your Plan', description: 'How do you plan to fix the problem?' },
+  { id: 'outcome', title: 'The Goal', description: 'What does success look like to you?' },
 ];
 
 export default function InitiativeBuilder() {
@@ -79,7 +79,7 @@ export default function InitiativeBuilder() {
             <ArrowLeft size={24} />
           </button>
           <div className="flex-1">
-            <h1 className="text-3xl font-black tracking-tight font-serif text-brand-ink">Initiative Builder</h1>
+            <h1 className="text-3xl font-black tracking-tight font-serif text-brand-ink">Project Creator</h1>
             <p className="text-brand-ink/60 font-medium">Step {currentStep + 1} of {STEPS.length}: {STEPS[currentStep].title}</p>
           </div>
         </div>
@@ -111,9 +111,9 @@ export default function InitiativeBuilder() {
             {currentStep === 0 && (
               <div className="grid grid-cols-1 gap-4">
                 {[
-                  { id: 'profit', label: 'Profit', icon: Briefcase, desc: 'Building a sustainable business model.' },
-                  { id: 'non-profit', label: 'Non-Profit', icon: Heart, desc: 'Solving social problems for impact.' },
-                  { id: 'community', label: 'Community', icon: Globe, desc: 'Gathering people for a shared purpose.' },
+                  { id: 'profit', label: 'Business', icon: Briefcase, desc: 'A project meant to grow and make money.' },
+                  { id: 'non-profit', label: 'Non-Profit', icon: Heart, desc: 'A project to help people and solve issues.' },
+                  { id: 'community', label: 'Community', icon: Globe, desc: 'Bringing people together for a common goal.' },
                 ].map((type) => (
                   <button
                     key={type.id}
@@ -148,21 +148,21 @@ export default function InitiativeBuilder() {
             {currentStep === 1 && (
               <div className="space-y-8">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Initiative Name</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Project Name</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Project Green Earth"
+                    placeholder="e.g. Clean City Project"
                     className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all text-lg font-bold text-brand-ink"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Problem Statement</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">What problem are you solving?</label>
                   <textarea
                     value={formData.problemStatement}
                     onChange={(e) => setFormData({ ...formData, problemStatement: e.target.value })}
-                    placeholder="What specific problem are you trying to solve?"
+                    placeholder="Describe the problem you want to fix..."
                     rows={4}
                     className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all leading-relaxed font-medium text-brand-ink"
                   />
@@ -173,21 +173,21 @@ export default function InitiativeBuilder() {
             {currentStep === 2 && (
               <div className="space-y-8">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Target Group</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Who is this for?</label>
                   <input
                     type="text"
                     value={formData.targetGroup}
                     onChange={(e) => setFormData({ ...formData, targetGroup: e.target.value })}
-                    placeholder="Who are you building this for?"
+                    placeholder="Who will this project help?"
                     className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all font-bold text-brand-ink"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Proposed Solution</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">How will you solve the problem?</label>
                   <textarea
                     value={formData.proposedSolution}
                     onChange={(e) => setFormData({ ...formData, proposedSolution: e.target.value })}
-                    placeholder="How does your solution work?"
+                    placeholder="Explain your plan in simple steps..."
                     rows={4}
                     className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all leading-relaxed font-medium text-brand-ink"
                   />
@@ -198,21 +198,21 @@ export default function InitiativeBuilder() {
             {currentStep === 3 && (
               <div className="space-y-8">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Expected Outcome</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">What is your main goal?</label>
                   <textarea
                     value={formData.expectedOutcome}
                     onChange={(e) => setFormData({ ...formData, expectedOutcome: e.target.value })}
-                    placeholder="What is the ultimate goal?"
+                    placeholder="What do you hope to achieve?"
                     rows={4}
                     className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all leading-relaxed font-medium text-brand-ink"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Why this initiative?</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-brand-ink/40 mb-3">Why are you doing this?</label>
                   <textarea
                     value={formData.why}
                     onChange={(e) => setFormData({ ...formData, why: e.target.value })}
-                    placeholder="What motivates you to start this?"
+                    placeholder="What is your motivation?"
                     rows={3}
                     className="w-full p-4 bg-brand-bg/50 border border-brand-line/10 rounded-2xl focus:outline-none focus:border-brand-primary transition-all leading-relaxed font-medium text-brand-ink"
                   />
@@ -244,7 +244,7 @@ export default function InitiativeBuilder() {
                 : "bg-brand-line/10 text-brand-ink/20 cursor-not-allowed"
             )}
           >
-            {currentStep === STEPS.length - 1 ? 'Finish & Launch' : 'Continue'}
+            {currentStep === STEPS.length - 1 ? 'Finish & Save' : 'Next'}
             <ArrowRight size={20} />
           </button>
         </div>
@@ -252,5 +252,3 @@ export default function InitiativeBuilder() {
     </div>
   );
 }
-
-

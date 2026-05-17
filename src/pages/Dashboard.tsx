@@ -58,10 +58,10 @@ export default function Dashboard() {
         <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
           <div className="flex-1 space-y-6">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-brand-ink serif leading-[1.1]">
-              Architecture of <span className="text-brand-primary italic">Impact.</span>
+              Turn your Ideas into <span className="text-brand-primary italic">Impact.</span>
             </h1>
             <p className="text-lg md:text-xl text-brand-ink/60 font-medium serif italic leading-relaxed">
-              Karya Shaastra is your OS for meaningful execution. Move beyond mere intent—structure your vision, log your daily actions, and build a verifiable portfolio of impact.
+              Karya Shaastra helps you get things done. Plan your vision, track your daily tasks, and build a real record of the impact you are making.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
@@ -95,7 +95,7 @@ export default function Dashboard() {
 
       <div className="space-y-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-brand-ink font-serif">Your Path of Action</h2>
+          <h2 className="text-2xl font-bold text-brand-ink font-serif">Your Ongoing Projects</h2>
         </div>
 
         {initiatives.length === 0 ? (
@@ -107,9 +107,9 @@ export default function Dashboard() {
             <div className="w-20 h-20 bg-brand-bg rounded-3xl flex items-center justify-center mx-auto mb-8">
               <Zap size={40} className="text-brand-primary" />
             </div>
-            <h2 className="text-3xl font-bold mb-4 serif text-brand-ink">A blank canvas for impact.</h2>
+            <h2 className="text-3xl font-bold mb-4 serif text-brand-ink">Start your first project.</h2>
             <p className="text-brand-ink/60 mb-10 max-w-sm mx-auto text-lg leading-relaxed font-medium italic serif">
-              "Structured architecture is the bedrock of consistent results." Start your first blueprint.
+              "Every great achievement starts with a simple plan." Build your first project today and track your progress.
             </p>
             <Link
               to="/builder"
@@ -152,8 +152,8 @@ export default function Dashboard() {
                     </button>
                   </div>
 
-                  <h3 className="text-2xl md:text-3xl font-black mb-4 group-hover:text-brand-primary transition-colors serif text-brand-ink relative z-10 leading-tight">{initiative.name}</h3>
-                  <p className="text-brand-ink/60 text-sm line-clamp-2 mb-8 leading-relaxed font-medium relative z-10">
+                  <h3 className="text-xl md:text-2xl font-black mb-4 group-hover:text-brand-primary transition-colors serif text-brand-ink relative z-10 leading-tight break-words line-clamp-2">{initiative.name}</h3>
+                  <p className="text-brand-ink/60 text-sm line-clamp-3 mb-8 leading-relaxed font-medium relative z-10 break-words">
                     {initiative.problemStatement}
                   </p>
 

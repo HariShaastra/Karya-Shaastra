@@ -101,11 +101,13 @@ export default function Saathi({ emotion = 'neutral', message, className = "" }:
         <motion.div
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/90 backdrop-blur-md px-5 py-3 rounded-2xl border border-brand-line/10 max-w-[180px] sm:max-w-[240px] shadow-xl"
+          className="bg-white/95 backdrop-blur-md px-5 py-3 rounded-2xl border border-brand-line/10 max-w-[160px] sm:max-w-[220px] md:max-w-[260px] shadow-xl relative z-20"
         >
-          <p className="text-[11px] font-bold text-brand-ink/80 text-center leading-relaxed serif italic tracking-wide">
+          <p className="text-[10px] sm:text-[11px] font-bold text-brand-ink/80 text-center leading-relaxed serif italic tracking-wide break-words">
             {message}
           </p>
+          {/* Bubble tail */}
+          <div className="absolute top-[-6px] left-1/2 -translate-x-1/2 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-white/95" />
         </motion.div>
       )}
     </div>

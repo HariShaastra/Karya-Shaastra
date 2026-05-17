@@ -20,12 +20,12 @@ export default function Layout() {
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'New Initiative', path: '/builder', icon: PlusCircle },
+    { name: 'New Project', path: '/builder', icon: PlusCircle },
     { name: 'User Guide', path: '/guide', icon: BookOpen },
   ];
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-ink font-sans">
+    <div className="min-h-screen bg-brand-bg text-brand-ink font-sans flex flex-col md:flex-row overflow-x-hidden">
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex flex-col w-64 fixed inset-y-0 left-0 bg-white border-r border-brand-line/10 z-50">
         <div className="p-6">
@@ -135,8 +135,8 @@ export default function Layout() {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="md:ml-64 flex-1">
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 lg:p-12">
+      <main className="flex-1 md:ml-64 min-w-0">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8 lg:p-12 overflow-x-hidden">
           <Outlet />
         </div>
       </main>
